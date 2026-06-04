@@ -10,7 +10,6 @@ typedef struct Item {
   unsigned int price;
   unsigned int qty;
   unsigned int Amount;
-
 } Item;
 std::vector<Item> getItemFrom(std::string filename, int n);
 #endif // !ITEM.H

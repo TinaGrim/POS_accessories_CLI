@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <cwchar>
 #include <string>
 #include <utility>
 #include <vector>
@@ -24,9 +25,6 @@ constexpr int space_y = (Itemrows > 3) ? 0 : 1;
 const std::vector<Item> items = getItemFrom("Items.csv", numberItem);
 
 ASCstack* ascStack = createEmptyStack();
-const int receipt_header_size = 6;
-const int receipt_items_size = 14;
-const int receipt_footer_size = 2;
 const int receipt_offset_x = 1;
 const int receipt_offset_y = 2;
 
@@ -37,23 +35,64 @@ const int col_price = receipt_items_offset_x + 25;
 const int col_amount = receipt_items_offset_x + 32;
 
 // clang-format off
-const wchar_t* receipt_header[receipt_header_size] = {
-     L"█  ☁️ █   ▃█▃  ",
-     L"█   ▅ █   █▃█ ",
-     L"███ █ ███ █ █ ",
-     L"╭────────────┬─────┬────┬──────┬───────╮",
-     L"│Description │Size │Qty │Price │Amount │",
-     L"╰────────────┴─────┴────┴──────┴───────╯"
-};
-
-const wchar_t* receipt_footer[receipt_footer_size] = {
-  L"THANK YOU FOR COMING",
-  L"Wifi: lila@accessories123",
+const wchar_t* welcome[] = {
+    L"██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗",
+    L"██║    ██║██╔════╝██║     ██╔════╝██╔═══██╗████╗ ████║██╔════╝",
+    L"██║ █╗ ██║█████╗  ██║     ██║     ██║   ██║██╔████╔██║█████╗",
+    L"██║███╗██║██╔══╝  ██║     ██║     ██║   ██║██║╚██╔╝██║██╔══╝",
+    L"╚███╔███╔╝███████╗███████╗╚██████╗╚██████╔╝██║ ╚═╝ ██║███████╗",
+    L" ╚══╝╚══╝ ╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝"};
+const wchar_t* team[] = {
+    L"████████╗███████╗ █████╗ ███╗   ███╗    ███╗   ███╗███████╗███╗   ███╗██████╗ ███████╗██████╗ █████╗",
+    L"╚══██╔══╝██╔════╝██╔══██╗████╗ ████║    ████╗ ████║██╔════╝████╗ ████║██╔══██╗██╔════╝██╔══██╗██╔══╝",
+    L"   ██║   █████╗  ███████║██╔████╔██║    ██╔████╔██║█████╗  ██╔████╔██║██████╔╝█████╗  ██████╔╝█████╗",
+    L"   ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║    ██║╚██╔╝██║██╔══╝  ██║╚██╔╝██║██╔══██╗██╔══╝  ██╔══██╗╚══██║",
+    L"   ██║   ███████╗██║  ██║██║ ╚═╝ ██║    ██║ ╚═╝ ██║███████╗██║ ╚═╝ ██║██████╔╝███████╗██║  ██║█████║",
+    L"   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝    ╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚════╝"};
+const wchar_t* tina[] = {L" ██╗       ████████╗██╗███╗   ██╗ █████╗      ",
+                         L"███║       ╚══██╔══╝██║████╗  ██║██╔══██╗     ",
+                         L"╚██║          ██║   ██║██╔██╗ ██║███████║     ",
+                         L" ██║          ██║   ██║██║╚██╗██║██╔══██║     ",
+                         L" ██║██╗       ██║   ██║██║ ╚████║██║  ██║     ",
+                         L" ╚═╝╚═╝       ╚═╝   ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝     "};
+const wchar_t* len[] = {L"██████╗        ██╗     ███████╗███╗   ██╗     ",
+                        L"╚════██╗       ██║     ██╔════╝████╗  ██║     ",
+                        L" █████╔╝       ██║     █████╗  ██╔██╗ ██║     ",
+                        L"██╔═══╝        ██║     ██╔══╝  ██║╚██╗██║     ",
+                        L"███████╗██╗    ███████╗███████╗██║ ╚████║     ",
+                        L"╚══════╝╚═╝    ╚══════╝╚══════╝╚═╝  ╚═══╝     "};
+const wchar_t* joly[] = {L"██████╗             ██╗ ██████╗ ██╗  ██╗   ██╗",
+                         L"╚════██╗            ██║██╔═══██╗██║  ╚██╗ ██╔╝",
+                         L" █████╔╝            ██║██║   ██║██║   ╚████╔╝ ",
+                         L" ╚═══██╗       ██   ██║██║   ██║██║    ╚██╔╝  ",
+                         L"██████╔╝██╗    ╚█████╔╝╚██████╔╝███████╗██║   ",
+                         L"╚═════╝ ╚═╝     ╚════╝  ╚═════╝ ╚══════╝╚═╝   "};
+const wchar_t* title[] = {L"  ████╗  ████╗ ████╗█████╗█████╗█████╗ ████╗ █████╗ ██╗█████╗█████╗",
+                          L" ██╔═██╗██╔══╝██╔══╝██╔══╝██╔══╝██╔══╝██╔═██╗██╔═██╗██║██╔══╝██╔══╝",
+                          L" ██████║██║   ██║   ███╗  █████╗█████╗██║ ██║█████╔╝██║███╗  █████╗",
+                          L" ██╔═██║██║   ██║   ██╔╝  ╚══██║╚══██║██║ ██║██╔═██╗██║██╔╝  ╚══██║",
+                          L" ██║ ██║╚████╗╚████╗█████╗█████║█████║╚████╔╝██║ ██║██║█████╗█████║",
+                          L" ╚═╝ ╚═╝ ╚═══╝ ╚═══╝╚════╝╚════╝╚════╝ ╚═══╝ ╚═╝ ╚═╝╚═╝╚════╝╚════╝"};
+const wchar_t* receipt[] = {L" ___            _      _   ",
+                            L"  | _ \\___  __ ___(_)_ __| |_ ",
+                            L"  |   / -_) _/ -_) | '_ \\  _|",
+                            L"  |_|_\\___\\__\\___|_| .__/\\__|",
+                            L"                   |_|"};
+// clang-format on
+const wchar_t* receipt_header[] = {L"█   █ █   ▃█▃ ",
+                                   L"█   ▅ █   █▃█ ",
+                                   L"███ █ ███ █ █ ",
+                                   L"╭────────────┬─────┬────┬──────┬───────╮",
+                                   L"│Description │Size │Qty │Price │Amount │",
+                                   L"╰────────────┴─────┴────┴──────┴───────╯"};
+const wchar_t* receipt_footer[] = {
+    L"THANK YOU FOR COMING",
+    L"Wifi: lila@accessories123",
 };
 
 // clang-format on
-void drawBorderWin(WINDOW* win, bool drawNow = true);
-void drawBorder(WINDOW* win, bool drawNow = true);
+void drawBorderWin(WINDOW* win, const bool drawNow = true);
+void drawBorder(WINDOW* win, const bool drawNow = true);
 void drawTeamIntro(WINDOW* win);
 void drawWelcome(WINDOW* win);
 void drawReceiptTitle(WINDOW* win);
@@ -61,7 +100,8 @@ void drawListReceipt(WINDOW* win);
 void createWindowItem(WINDOW* win,
                       std::vector<std::pair<WINDOW*, Item>>& ItemElement);
 void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement);
-
+Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement, int y,
+                    int x);
 int main(int argc, char* argv[]) {
   /*
     initialization
@@ -88,49 +128,51 @@ int main(int argc, char* argv[]) {
   */
   WINDOW* win = newwin(LINES, COLS, 0, 0);
   WINDOW* receiptItem =
-      newwin(LINES - 6, shift_left - 3, 5, COLS - shift_left + 2);
-  WINDOW* Item = newwin(LINES - 2, COLS - shift_left - 3, 1, 2);
+      newwin(LINES - 2, shift_left - 3, 1, COLS - shift_left + 2);
+  WINDOW* Item_window = newwin(LINES - 2, COLS - shift_left - 3, 1, 2);
 
   const int welcome_width = (COLS / 2) <= 64 ? 64 : COLS / 2 - 2;
-  WINDOW* welcome = newwin(LINES / 2 - 8, welcome_width, 0, 0);
-  createWindowItem(Item, ItemElement);
+  WINDOW* welcome_window = newwin(LINES / 2 - 8, welcome_width, 0, 0);
+  createWindowItem(Item_window, ItemElement);
+  keypad(Item_window, TRUE);
+  keypad(receiptItem, TRUE);
 
   // init color we needed
   init_pair(1, COLOR_BLACK, 235);          // blck with gray
-  init_pair(2, COLOR_WHITE, 245);          // white with gray
+  init_pair(2, COLOR_WHITE, 243);          // white with gray
   init_pair(3, COLOR_BLACK, 15);           // black with white
-  init_pair(4, COLOR_BLACK, 245);          // black with gray
+  init_pair(4, COLOR_BLACK, 243);          // black with gray
   init_pair(5, 236, COLOR_WHITE);          // gray with white
   init_pair(6, 177, COLOR_WHITE);          // pink with white
   init_pair(53, 53, COLOR_WHITE);          // purple with white
   init_pair(54, COLOR_BLACK, COLOR_WHITE); // black with white
-  init_pair(227, 186, 245);
+  init_pair(227, 186, 245);                // 245
   init_pair(188, 188, 15);
   init_pair(252, COLOR_BLACK, 246);
   init_pair(11, COLOR_BLACK, 11);
   init_pair(15, 15, 15);          // black with white
-  init_pair(22, COLOR_BLACK, 22); // black with white
+  init_pair(22, COLOR_BLACK, 17); // black with deepblue
 
   /*
     set background
   */
-  wbkgd(welcome, COLOR_PAIR(53));
+  wbkgd(welcome_window, COLOR_PAIR(53));
   wbkgd(receiptItem, COLOR_PAIR(11));
-  wbkgd(Item, COLOR_PAIR(3));
+  wbkgd(Item_window, COLOR_PAIR(3));
 
   /*
     Welcome
   */
   for (size_t i = 0; i < COLS / 2 - welcome_width / 2; i++) {
-    mvwin(welcome, LINES / 4, i);
-    drawWelcome(welcome);
+    mvwin(welcome_window, LINES / 4, i);
+    drawWelcome(welcome_window);
     napms(6);
 
     if (i == COLS / 2 - welcome_width / 2 - 1)
       break;
 
-    wclear(welcome);
-    wrefresh(welcome);
+    wclear(welcome_window);
+    wrefresh(welcome_window);
     wclear(win);
     wrefresh(win);
     wbkgd(win, COLOR_PAIR(1));
@@ -142,12 +184,12 @@ int main(int argc, char* argv[]) {
   getch();
 
   for (size_t i = 0; i < 20; i++) {
-    mvwin(welcome, LINES / 4 + i, COLS / 2 - welcome_width / 2 - 1);
-    drawWelcome(welcome);
+    mvwin(welcome_window, LINES / 4 + i, COLS / 2 - welcome_width / 2 - 1);
+    drawWelcome(welcome_window);
     napms(20);
 
-    wclear(welcome);
-    wrefresh(welcome);
+    wclear(welcome_window);
+    wrefresh(welcome_window);
     wclear(win);
     wrefresh(win);
     wbkgd(win, COLOR_PAIR(1));
@@ -179,20 +221,31 @@ int main(int argc, char* argv[]) {
   // drawReceiptTitle(win);
 
   // List Available Item
-  drawItem(Item, ItemElement);
+  drawItem(Item_window, ItemElement);
 
   int input;
-  while (!(input = wgetch(Item) == 'q')) {
+  while ((input = wgetch(Item_window)) != 'q') {
 
     switch (input) {
     case '\n':
-      mvwprintw(Item, 0, 0, "Hello");
-      wrefresh(Item);
       break;
     case KEY_MOUSE:
-      if (getmouse(&mevent) == OK) {
-        mvwprintw(Item, 0, 0, "x:%d y:%d", mevent.x, mevent.y);
-        wrefresh(Item);
+      if (getmouse(&mevent) == OK && (mevent.bstate & BUTTON1_PRESSED)) {
+        Item* selected = getWindowItem(ItemElement, mevent.y, mevent.x);
+
+        if (selected != nullptr) {
+
+          if (!checkExist(ascStack, selected->ID)) {
+            push(ascStack, *selected, 1, selected->price * 1);
+            drawListReceipt(receiptItem);
+          } else {
+            updateProduct(ascStack, selected->ID, selected->name,
+                          selected->size, selected->price, selected->qty);
+            drawListReceipt(receiptItem);
+          }
+        }
+
+        wrefresh(receiptItem);
       }
       break;
     default:
@@ -202,10 +255,10 @@ int main(int argc, char* argv[]) {
   }
 
   reset_color_pairs();
-  delwin(welcome);
+  delwin(welcome_window);
   delwin(win);
   delwin(receiptItem);
-  delwin(Item);
+  delwin(Item_window);
   endwin();
   return 0;
 }
@@ -241,33 +294,6 @@ void drawBorder(WINDOW* win, bool drawNow) {
     wrefresh(win);
 }
 void drawTeamIntro(WINDOW* win) {
-  // clang-format off
-const wchar_t* team[] = {
-      L"████████╗███████╗ █████╗ ███╗   ███╗    ███╗   ███╗███████╗███╗   ███╗██████╗ ███████╗██████╗ ",
-      L"╚══██╔══╝██╔════╝██╔══██╗████╗ ████║    ████╗ ████║██╔════╝████╗ ████║██╔══██╗██╔════╝██╔══██╗",
-      L"   ██║   █████╗  ███████║██╔████╔██║    ██╔████╔██║█████╗  ██╔████╔██║██████╔╝█████╗  ██████╔╝",
-      L"   ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║    ██║╚██╔╝██║██╔══╝  ██║╚██╔╝██║██╔══██╗██╔══╝  ██╔══██╗",
-      L"   ██║   ███████╗██║  ██║██║ ╚═╝ ██║    ██║ ╚═╝ ██║███████╗██║ ╚═╝ ██║██████╔╝███████╗██║  ██║",
-      L"   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝    ╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝╚═════╝ ╚══════╝╚═╝  ╚═╝"};
-  // clang-format on
-  const wchar_t* tina[] = {L" ██╗       ████████╗██╗███╗   ██╗ █████╗      ",
-                           L"███║       ╚══██╔══╝██║████╗  ██║██╔══██╗     ",
-                           L"╚██║          ██║   ██║██╔██╗ ██║███████║     ",
-                           L" ██║          ██║   ██║██║╚██╗██║██╔══██║     ",
-                           L" ██║██╗       ██║   ██║██║ ╚████║██║  ██║     ",
-                           L" ╚═╝╚═╝       ╚═╝   ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝     "};
-  const wchar_t* len[] = {L"██████╗        ██╗     ███████╗███╗   ██╗     ",
-                          L"╚════██╗       ██║     ██╔════╝████╗  ██║     ",
-                          L" █████╔╝       ██║     █████╗  ██╔██╗ ██║     ",
-                          L"██╔═══╝        ██║     ██╔══╝  ██║╚██╗██║     ",
-                          L"███████╗██╗    ███████╗███████╗██║ ╚████║     ",
-                          L"╚══════╝╚═╝    ╚══════╝╚══════╝╚═╝  ╚═══╝     "};
-  const wchar_t* joly[] = {L"██████╗             ██╗ ██████╗ ██╗  ██╗   ██╗",
-                           L"╚════██╗            ██║██╔═══██╗██║  ╚██╗ ██╔╝",
-                           L" █████╔╝            ██║██║   ██║██║   ╚████╔╝ ",
-                           L" ╚═══██╗       ██   ██║██║   ██║██║    ╚██╔╝  ",
-                           L"██████╔╝██╗    ╚█████╔╝╚██████╔╝███████╗██║   ",
-                           L"╚═════╝ ╚═╝     ╚════╝  ╚═════╝ ╚══════╝╚═╝   "};
 
   int cols, rows;
   getmaxyx(win, rows, cols);
@@ -322,13 +348,6 @@ const wchar_t* team[] = {
   wrefresh(win);
 }
 void drawWelcome(WINDOW* win) {
-  const wchar_t* welcome[] = {
-      L"██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗",
-      L"██║    ██║██╔════╝██║     ██╔════╝██╔═══██╗████╗ ████║██╔════╝",
-      L"██║ █╗ ██║█████╗  ██║     ██║     ██║   ██║██╔████╔██║█████╗",
-      L"██║███╗██║██╔══╝  ██║     ██║     ██║   ██║██║╚██╔╝██║██╔══╝",
-      L"╚███╔███╔╝███████╗███████╗╚██████╗╚██████╔╝██║ ╚═╝ ██║███████╗",
-      L" ╚══╝╚══╝ ╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝"};
   int x, y;
   getmaxyx(win, y, x);
   int ROWS = 6;
@@ -346,14 +365,6 @@ void drawReceiptTitle(WINDOW* win) {
   int x, y;
   getmaxyx(win, y, x);
 
-  // clang-format off
-  const wchar_t* receipt[] = { // receipt
-      L" ___            _      _   ",
-      L"  | _ \\___  __ ___(_)_ __| |_ ",
-      L"  |   / -_) _/ -_) | '_ \\  _|",
-      L"  |_|_\\___\\__\\___|_| .__/\\__|",
-      L"                   |_|"};
-  // clang-format on
   int ROWS = 5;
   wattron(win, COLOR_PAIR(3));
   for (int i = 0; i < ROWS; i++) {
@@ -363,59 +374,73 @@ void drawReceiptTitle(WINDOW* win) {
   wrefresh(win);
 }
 void drawListReceipt(WINDOW* win) {
-  int current = receipt_offset_y;
 
+  int x, y;
+  int current = receipt_offset_y;
+  getmaxyx(win, y, x);
+
+  const int receipt_header_size = 6;
+  int receipt_items_size = 0;
+  const int receipt_footer_size = 2;
   /*
     header
   */
   for (size_t i = 0; i < receipt_header_size; i++) {
-    // if (i == 0) {
-    //
-    // mvwaddwstr(win, current++, receipt_offset_x, receipt_header[i]);
-    // }
     mvwaddwstr(win, current++, receipt_offset_x, receipt_header[i]);
   }
 
   /*
     Items
   */
-  push(ascStack, items[0]);
-  push(ascStack, items[1]);
-  push(ascStack, items[2]);
 
+  receipt_items_size = y - (current + 2) - 6;
+  int idx = 0;
   for (size_t i = 0; i < receipt_items_size; i++) {
-    Item* item = getItemAt(ascStack, i);
+    Item* item = getItemAt(ascStack, idx);
+
     if (!(item == nullptr)) {
 
-      mvwprintw(win, current, receipt_items_offset_x, "%s", "●");
-      mvwprintw(win, current, receipt_items_offset_x + 2, "%-12s",
-                item->name.c_str());
-      mvwprintw(win, current, col_size, "%5s", item->size.c_str());
-      mvwprintw(win, current, col_qty, "%4d", item->qty);
-      mvwprintw(win, current, col_price, "%6s",
-                (std::to_string(item->price) + "$").c_str());
-      mvwprintw(win, current, col_amount, "%7s",
-                (std::to_string(item->Amount) + "$").c_str());
-
-      current++;
-      current++;
-    } else {
-      mvwprintw(win, current++, 0, "%s", "");
+      if (receipt_items_size == i + 1) {
+        mvwprintw(win, current, receipt_items_offset_x, "%s", "●");
+        mvwprintw(win, current, receipt_items_offset_x + 2, "%-12s",
+                  item->name.c_str());
+        mvwprintw(win, current, col_size, "%5s", item->size.c_str());
+        mvwprintw(win, current, col_qty, "%4d", item->qty);
+        mvwprintw(win, current, col_price, "%6s",
+                  (std::to_string(item->price) + "$").c_str());
+        mvwprintw(win, current++, col_amount, "%7s",
+                  (std::to_string(item->Amount) + "$").c_str());
+      } else {
+        mvwprintw(win, current, receipt_items_offset_x, "%s", "●");
+        mvwprintw(win, current, receipt_items_offset_x + 2, "%-12s",
+                  item->name.c_str());
+        mvwprintw(win, current, col_size, "%5s", item->size.c_str());
+        mvwprintw(win, current, col_qty, "%4d", item->qty);
+        mvwprintw(win, current, col_price, "%6s",
+                  (std::to_string(item->price) + "$").c_str());
+        mvwprintw(win, current++, col_amount, "%7s",
+                  (std::to_string(item->Amount) + "$").c_str());
+        mvwprintw(win, current++, 0, "%s", "");
+        i++;
+      }
+      idx++;
+      continue;
     }
+    mvwprintw(win, current++, 0, "%s", "");
   }
   mvwaddwstr(win, current++, receipt_items_offset_x,
              L"─────────────────────────────────────────");
   /*
     total
   */
-  int total = 0;
+  int total = Summation(ascStack);
   mvwprintw(win, current, receipt_items_offset_x, "TOTAL ($):");
   mvwprintw(win, current++, col_amount, "%7s",
-            (std::to_string((total)) + "$").c_str());
+            (std::to_string(total) + "$").c_str());
 
   mvwprintw(win, current, receipt_items_offset_x, "TOTAL (R):");
   mvwprintw(win, current++, col_amount, "%7s",
-            (std::to_string((total * 4000)) + "R").c_str());
+            (std::to_string(total * 4000) + "R").c_str());
 
   mvwaddwstr(win, current++, receipt_items_offset_x,
              L"─────────────────────────────────────────");
@@ -428,8 +453,6 @@ void drawListReceipt(WINDOW* win) {
     mvwaddwstr(win, current++, center, receipt_footer[i]);
   }
 
-  int x, y;
-  getmaxyx(win, y, x);
   drawBorderWin(win);
   mvwaddstr(win, 0, x - shift_left / 2 - 4, "【Receipt】");
   wrefresh(win);
@@ -462,13 +485,6 @@ void createWindowItem(WINDOW* win,
   }
 }
 void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement) {
-  const wchar_t* title[] = {
-      L" ████╗  ████╗ ████╗█████╗█████╗█████╗ ████╗ █████╗ ██╗█████╗█████╗",
-      L"██╔═██╗██╔══╝██╔══╝██╔══╝██╔══╝██╔══╝██╔═██╗██╔═██╗██║██╔══╝██╔══╝",
-      L"██████║██║   ██║   ███╗  █████╗█████╗██║ ██║█████╔╝██║███╗  █████╗",
-      L"██╔═██║██║   ██║   ██╔╝  ╚══██║╚══██║██║ ██║██╔═██╗██║██╔╝  ╚══██║",
-      L"██║ ██║╚████╗╚████╗█████╗█████║█████║╚████╔╝██║ ██║██║█████╗█████║",
-      L"╚═╝ ╚═╝ ╚═══╝ ╚═══╝╚════╝╚════╝╚════╝ ╚═══╝ ╚═╝ ╚═╝╚═╝╚════╝╚════╝"};
   int cols, rows;
 
   int win_x_begin, win_y_begin;
@@ -478,6 +494,9 @@ void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement) {
   int ROWS = 6;
   int COLS = 0;
 
+  /*
+    Accessories
+  */
   wattron(win, COLOR_PAIR(227));
   for (size_t i = 0; i < ROWS; i++) {
     mvwaddwstr(win, i + 1, cols / 2 - wcslen(title[0]) / 2, title[i]);
@@ -503,4 +522,21 @@ void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement) {
 
     wrefresh(newin);
   }
+}
+Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement, int y,
+                    int x) {
+
+  for (auto& [WIN, item] : ItemElement) {
+    int win_x, win_y;
+    int win_x_begin, win_y_begin;
+    getmaxyx(WIN, win_y, win_x);
+    getbegyx(WIN, win_y_begin, win_x_begin);
+    win_x_begin += 1;
+    win_y_begin += 1;
+    if (x >= win_x_begin && x <= win_x_begin + win_x && y >= win_y_begin &&
+        y <= win_y_begin + win_y) {
+      return &item;
+    }
+  }
+  return nullptr;
 }

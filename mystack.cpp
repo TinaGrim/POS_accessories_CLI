@@ -28,6 +28,51 @@ void push(ASCstack* s, Item item) {
   s->size++;
 }
 
+void push(ASCstack* s, Item item, unsigned int qty, unsigned Amount) {
+
+  ASC* newNode = new ASC;
+
+  newNode->item = item;
+  newNode->item.qty = qty;
+  newNode->item.Amount = Amount;
+
+  newNode->next = s->top;
+
+  s->top = newNode;
+
+  s->size++;
+}
+void push(ASCstack* s, std::string name, std::string size, unsigned int ID,
+          unsigned int price, unsigned int qty, unsigned Amount) {
+
+  ASC* newNode = new ASC;
+
+  newNode->item.name = name;
+  newNode->item.size = size;
+  newNode->item.ID = ID;
+  newNode->item.price = price;
+  newNode->item.qty = qty;
+  newNode->item.Amount = Amount;
+
+  newNode->next = s->top;
+
+  s->top = newNode;
+
+  s->size++;
+}
+bool checkExist(ASCstack* s, int ID) {
+  if (isEmpty(s)) {
+    return false;
+  }
+  ASC* temp = s->top;
+  while (temp != nullptr) {
+    if (temp->item.ID == ID) {
+      return true;
+    }
+    temp = temp->next;
+  }
+  return false;
+}
 // Pop
 Item* pop(ASCstack* s) {
 
@@ -107,7 +152,8 @@ Item* searchProduct(ASCstack* s, int searchID) {
 }
 
 // UPDATE
-bool updateProduct(ASCstack* s, int updateID, std::string name, int price) {
+bool updateProduct(ASCstack* s,unsigned int updateID, std::string name,
+                   std::string size, unsigned int price, unsigned int qty) {
 
   if (isEmpty(s)) {
     return false;
@@ -121,7 +167,11 @@ bool updateProduct(ASCstack* s, int updateID, std::string name, int price) {
 
       // name
       temp->item.name = name;
+      temp->item.ID = updateID;
       temp->item.price = price;
+      temp->item.qty++;
+      temp->item.size = size;
+      temp->item.Amount = temp->item.price * temp->item.qty;
 
       return true;
     }
@@ -162,4 +212,17 @@ bool deleteProduct(ASCstack* s, int deleteID) {
     current = current->next;
   }
   return false;
+}
+int Summation(ASCstack* c) {
+  int total = 0;
+  ASC* temp = c->top;
+  while (temp != nullptr) {
+    total += temp->item.qty * temp->item.price;
+    temp = temp->next;
+  }
+  return total;
+}
+float tax(float total) {
+  // expected rate is 10%
+  return total * 0.1;
 }
