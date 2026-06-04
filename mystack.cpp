@@ -97,21 +97,19 @@ Item* pop(ASCstack* s) {
 
 Item* getItemAt(ASCstack* s, const int n) {
 
-  if (isEmpty(s)) {
+  if (isEmpty(s) || n < 0 || n >= s->size) {
     return nullptr;
   }
   ASC* temp = s->top;
 
   int i = 0;
-  while (temp != nullptr && s->size - 1 >= n) {
-    if (n == i) {
-      return &temp->item;
-    }
+  while (temp != nullptr && i < n) {
+
     temp = temp->next;
     i++;
   }
 
-  return nullptr;
+  return &temp->item;
 }
 // READ
 // void displayProducts(ASCstack* s) {
@@ -140,9 +138,7 @@ Item* searchProduct(ASCstack* s, int searchID) {
   ASC* temp = s->top;
 
   while (temp != nullptr) {
-
     if (temp->item.ID == searchID) {
-
       return &temp->item;
     }
 
@@ -152,7 +148,7 @@ Item* searchProduct(ASCstack* s, int searchID) {
 }
 
 // UPDATE
-bool updateProduct(ASCstack* s,unsigned int updateID, std::string name,
+bool updateProduct(ASCstack* s, unsigned int updateID, std::string name,
                    std::string size, unsigned int price, unsigned int qty) {
 
   if (isEmpty(s)) {
@@ -195,17 +191,23 @@ bool deleteProduct(ASCstack* s, int deleteID) {
 
     if (current->item.ID == deleteID) {
 
-      if (previous == nullptr) {
-        s->top = current->next;
+      if (current->item.qty != 1) {
+        current->item.qty--;
+        current->item.Amount = current->item.price * current->item.qty;
+
       } else {
-        previous->next = current->next;
+        if (previous == nullptr) {
+          s->top = current->next;
+        } else {
+          previous->next = current->next;
+        }
+
+        delete current;
+
+        s->size--;
+
+        return true;
       }
-
-      delete current;
-
-      s->size--;
-
-      return true;
     }
 
     previous = current;
