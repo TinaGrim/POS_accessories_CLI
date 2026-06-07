@@ -11,8 +11,13 @@
 #include "include/mystack.h"
 #include "ncurses.h"
 #include "qrencode.h"
+#include "util/urlpath.h"
+#include "util/windowmanager.h"
 #include "wchar.h"
 
+/*
+  configuration
+*/
 constexpr int numberItem = 21;
 constexpr int shift_left = 45;
 constexpr int row_perbox = 7;
@@ -22,12 +27,13 @@ constexpr int Itemrows =
     ((numberItem % row_perbox == 0) ? numberItem / row_perbox
                                     : numberItem / row_perbox + 1);
 constexpr int space_y = (Itemrows > 3) ? 0 : 1;
+
+/*
+  Import data
+*/
 const std::vector<Item> items = getItemFrom("Items.csv", numberItem);
 int selected_window_id = 0;
 ASCstack* ascStack = createEmptyStack();
-
-// Qrcode raw data
-QRcode* qrcode;
 
 const int receipt_offset_x = 1;
 const int receipt_offset_y = 2;
@@ -93,11 +99,17 @@ const wchar_t* receipt_footer[] = {
     L"THANK YOU FOR COMING >3",
     L"Wifi: lila@accessories123",
 };
-// Qrcode with fixed charaters
+
+// Qrcode raw data
+QRcode* qrcode;
+
+// Qrcode string
 std::wstring qr_code[40];
 bool is_open_qrCode = false;
+
 // Url Path
-std::string URL = "http://127.0.0.1:5000";
+// std::string URL = "http://127.0.0.1:5000";
+std::string URL = "https://pos-accessories-cli.onrender.com";
 std::string BINARY_PATH = "";
 
 // clang-format on
@@ -125,8 +137,6 @@ Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement, int y,
 void initQrcode(std::string url);
 void drawQrCode(WINDOW* win);
 void addItem(WINDOW* win, Item item);
-std::string toBinaryPath(ASCstack* ASC);
-std::string addUrlPath(std::string url, std::string path);
 int main(int argc, char* argv[]) {
   /*
     initialization
@@ -152,36 +162,31 @@ int main(int argc, char* argv[]) {
   /*
     create window
   */
-  WINDOW* mainWindow = newwin(LINES, COLS, 0, 0);
-  WINDOW* receiptItemWindow =
-      newwin(LINES - 2, shift_left - 3, 1, COLS - shift_left + 2);
-  WINDOW* ItemWindow = newwin(LINES - 2, COLS - shift_left - 3, 1, 2);
-
-  const int welcome_width = (COLS / 2) <= 64 ? 64 : COLS / 2 - 2;
-  WINDOW* welcomeWindow = newwin(LINES / 2 - 8, welcome_width, 0, 0);
-  // const int qr_code_lenght = std::wcslen(qr_code);
-  const int qr_code_lenght = qr_code[0].size();
-  WINDOW* qrCodeWindow =
-      newwin(qr_code_lenght / 2 + 5, qr_code_lenght + 10,
-             LINES / 2 - qr_code_lenght / 2, COLS / 2 - qr_code_lenght / 2);
+  windowManager WM(shift_left);
+  WM.init();
+  WINDOW* mainWindow = WM.getmainWindow();
+  WINDOW* receiptItemWindow = WM.getreceiptItemWindow();
+  WINDOW* ItemWindow = WM.getItemWindow();
+  WINDOW* welcomeWindow = WM.getwelcomeWindow();
+  WINDOW* qrCodeWindow = WM.getqrCodeWindow();
   createWindowItem(ItemWindow, ItemElement);
   keypad(ItemWindow, TRUE);
 
-  // init color we needed
+  /*
+    init color we needed
+    text color with background color
+  */
   init_pair(1, COLOR_BLACK, 235);          // blck with gray
   init_pair(2, COLOR_WHITE, 243);          // white with gray
   init_pair(3, COLOR_BLACK, 15);           // black with white
   init_pair(4, COLOR_BLACK, 243);          // black with gray
   init_pair(5, 236, COLOR_WHITE);          // gray with white
-  init_pair(6, 236, COLOR_WHITE);          // pink with white
   init_pair(53, 53, COLOR_WHITE);          // purple with white
   init_pair(54, COLOR_BLACK, COLOR_WHITE); // black with white
-  init_pair(227, 186, 245);                // 245
-  init_pair(188, 188, 15);
-  init_pair(252, COLOR_BLACK, 246);
-  init_pair(11, COLOR_BLACK, 11);
-  init_pair(15, 15, 15);          // black with white
-  init_pair(22, COLOR_BLACK, 17); // black with deepblue
+  init_pair(227, 186, 245);                // yellow with gray
+  init_pair(11, COLOR_BLACK, 11);          // back with yellow
+  init_pair(15, 15, 15);                   // white with white
+  init_pair(22, COLOR_BLACK, 17);          // black with deepblue
 
   /*
     set background
@@ -192,14 +197,14 @@ int main(int argc, char* argv[]) {
   wbkgd(qrCodeWindow, COLOR_PAIR(3));
 
   /*
-    Welcome
+    Welcome slide in animations
   */
-  for (size_t i = 0; i < COLS / 2 - welcome_width / 2; i++) {
+  for (size_t i = 0; i < COLS / 2 - WM.getWelcomePadding() / 2; i++) {
     mvwin(welcomeWindow, LINES / 4, i);
     drawWelcome(welcomeWindow);
     napms(6);
 
-    if (i == COLS / 2 - welcome_width / 2 - 1)
+    if (i == COLS / 2 - WM.getWelcomePadding() / 2 - 1)
       break;
 
     wclear(welcomeWindow);
@@ -214,8 +219,12 @@ int main(int argc, char* argv[]) {
   flushinp();
   getch();
 
+  /*
+    Welcome slide out animations
+  */
   for (size_t i = 0; i < 20; i++) {
-    mvwin(welcomeWindow, LINES / 4 + i, COLS / 2 - welcome_width / 2 - 1);
+    mvwin(welcomeWindow, LINES / 4 + i,
+          COLS / 2 - WM.getWelcomePadding() / 2 - 1);
     drawWelcome(welcomeWindow);
     napms(20);
 
@@ -248,9 +257,6 @@ int main(int argc, char* argv[]) {
   // Receipt - Item
   drawListReceipt(receiptItemWindow);
 
-  // Receipt - title
-  // drawReceiptTitle(win);
-
   // List Available Item
   drawItem(ItemWindow, ItemElement);
   wrefresh(ItemWindow);
@@ -263,8 +269,11 @@ int main(int argc, char* argv[]) {
       break;
     case 'p':
       if (!is_open_qrCode) {
+        /*
+          Display Qr code
+        */
 
-        initQrcode(addUrlPath(URL, toBinaryPath(ascStack)));
+        initQrcode(addUrlPath(URL, toBinaryPath(ascStack, numberItem)));
         drawQrCode(qrCodeWindow);
         wrefresh(qrCodeWindow);
         is_open_qrCode = true;
@@ -498,7 +507,6 @@ void drawListReceipt(WINDOW* win) {
   /*
     Items
   */
-
   receipt_items_size = y - (current + 1) - 7;
   int idx = 0;
   for (size_t i = 0; i < receipt_items_size; i++) {
@@ -612,16 +620,17 @@ void reDrawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement,
       mvwaddstr(newin, (win_y % 2) ? win_y / 2 : win_y / 2 - 1,
                 win_x / 2 - item.name.length() / 2, (item.name).c_str());
 
+      std::string qtyString = std::to_string(qty);
+      int qtyLength = qtyString.length();
       if (qty > 0) {
         // Quantity
         mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2,
-                  win_x / 2 - std::to_string(qty).length() / 2,
-                  ("x" + std::to_string(qty)).c_str());
+                  win_x / 2 - qtyLength / 2, ("x" + qtyString).c_str());
       } else {
 
         // Quantity clear
         mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2,
-                  win_x / 2 - std::to_string(qty).length() / 2, "     ");
+                  win_x / 2 - qtyLength / 2, "     ");
       }
       // ID
       mvwaddstr(newin, 1, 1, ("#" + std::to_string(item.ID)).c_str());
@@ -639,7 +648,7 @@ void change_selected_item_color(
     std::vector<std::pair<WINDOW*, Item>>& ItemElement, unsigned id) {
   for (auto& [newin, item] : ItemElement) {
     if (item.ID == id) {
-      wbkgd(newin, COLOR_PAIR(6));
+      wbkgd(newin, COLOR_PAIR(5));
       wrefresh(newin);
     } else {
       wbkgd(newin, COLOR_PAIR(3));
@@ -667,6 +676,9 @@ void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement) {
   }
   wattroff(win, COLOR_PAIR(227));
 
+  /*
+    Draw all Items
+  */
   for (auto& [newin, item] : ItemElement) {
     int win_y, win_x;
     getmaxyx(newin, win_y, win_x);
@@ -699,13 +711,14 @@ Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement,
 Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement, int y,
                     int x) {
 
+  /*
+    getItem from the orginal file not stack
+  */
   for (auto& [WIN, item] : ItemElement) {
     int win_x, win_y;
     int win_x_begin, win_y_begin;
     getmaxyx(WIN, win_y, win_x);
     getbegyx(WIN, win_y_begin, win_x_begin);
-    // win_x_begin += 1;
-    // win_y_begin += 1;
     if (x >= win_x_begin && x <= win_x_begin + win_x && y >= win_y_begin &&
         y <= win_y_begin + win_y) {
       return &item;
@@ -714,6 +727,9 @@ Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement, int y,
   return nullptr;
 }
 void initQrcode(std::string url) {
+  /*
+    Remake qr_code string
+  */
   qrcode = QRcode_encodeString(url.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
   for (size_t i = 0; i < qrcode->width / 2 + 1; i++) {
     std::wstring tem;
@@ -739,6 +755,9 @@ void initQrcode(std::string url) {
   }
 }
 void drawQrCode(WINDOW* win) {
+  /*
+    Draw on the screen
+  */
   int x, y;
   getmaxyx(win, y, x);
   drawBorderWin(win);
@@ -750,28 +769,14 @@ void drawQrCode(WINDOW* win) {
   }
 }
 void addItem(WINDOW* win, Item item) {
+  /*
+    Add new Item if not exist otherwise increase Quantity
+  */
   if (!checkExist(ascStack, item.ID)) {
     push(ascStack, item, 1, item.price * 1);
     drawListReceipt(win);
   } else {
-    updateProduct(ascStack, item.ID, item.name, item.size, item.price,
-                  item.qty);
+    addexistProduct(ascStack, item.ID);
     drawListReceipt(win);
   }
-}
-
-std::string toBinaryPath(ASCstack* ASC) {
-  std::string BinaryPath;
-  for (size_t i = 1; i <= numberItem; i++) {
-    Item* item = searchProduct(ASC, i);
-    if (!(item == nullptr)) {
-      BinaryPath += "1";
-    } else {
-      BinaryPath += "0";
-    }
-  }
-  return BinaryPath;
-}
-std::string addUrlPath(std::string url, std::string path) {
-  return url + "/items/" + path;
 }
