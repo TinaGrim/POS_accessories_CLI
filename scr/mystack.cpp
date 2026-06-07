@@ -1,5 +1,5 @@
-#include "mystack.h"
-#include "Items.h"
+#include "../include/mystack.h"
+#include "../include/Items.h"
 #include <string>
 
 // Create Empty Stack
@@ -83,27 +83,23 @@ Item* pop(ASCstack* s) {
   }
 
   ASC* temp = s->top;
-
   tempItem = temp->item;
-
   s->top = temp->next;
-
-  delete temp;
 
   s->size--;
 
-  return nullptr;
+  return &temp->item;
 }
 
-Item* getItemAt(ASCstack* s, const int n) {
+Item* getItemAt(ASCstack* s, const int ID) {
 
-  if (isEmpty(s) || n < 0 || n >= s->size) {
+  if (isEmpty(s) || ID < 0 || ID >= s->size) {
     return nullptr;
   }
   ASC* temp = s->top;
 
   int i = 0;
-  while (temp != nullptr && i < n) {
+  while (temp != nullptr && i < ID) {
 
     temp = temp->next;
     i++;
@@ -194,18 +190,15 @@ bool deleteProduct(ASCstack* s, int deleteID) {
       if (current->item.qty != 1) {
         current->item.qty--;
         current->item.Amount = current->item.price * current->item.qty;
-
       } else {
         if (previous == nullptr) {
           s->top = current->next;
         } else {
           previous->next = current->next;
         }
-
         delete current;
 
         s->size--;
-
         return true;
       }
     }

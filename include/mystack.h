@@ -32,7 +32,7 @@ bool checkExist(ASCstack* s, int ID);
 Item* pop(ASCstack* s);
 
 // Get Item At
-Item* getItemAt(ASCstack* s, const int n);
+Item* getItemAt(ASCstack* s, const int ID);
 
 // READ
 // void displayProducts(ASCstack* s) {

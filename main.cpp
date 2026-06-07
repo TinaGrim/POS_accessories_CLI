@@ -1,4 +1,3 @@
-
 #include <clocale>
 #include <cstddef>
 #include <cstdio>
@@ -8,9 +7,10 @@
 #include <utility>
 #include <vector>
 
-#include "Items.h"
-#include "mystack.h"
+#include "include/Items.h"
+#include "include/mystack.h"
 #include "ncurses.h"
+#include "qrencode.h"
 #include "wchar.h"
 
 constexpr int numberItem = 21;
@@ -25,6 +25,10 @@ constexpr int space_y = (Itemrows > 3) ? 0 : 1;
 const std::vector<Item> items = getItemFrom("Items.csv", numberItem);
 int selected_window_id = 0;
 ASCstack* ascStack = createEmptyStack();
+
+// Qrcode raw data
+QRcode* qrcode;
+
 const int receipt_offset_x = 1;
 const int receipt_offset_y = 2;
 
@@ -78,8 +82,7 @@ const wchar_t* receipt[] = {L" ___            _      _   ",
                             L"  |   / -_) _/ -_) | '_ \\  _|",
                             L"  |_|_\\___\\__\\___|_| .__/\\__|",
                             L"                   |_|"};
-// clang-format on
-const wchar_t* receipt_header[] = {L"█   ▀ █   ▃█▃ ",
+const wchar_t* receiptHeader[] = { L"█   ▀ █   ▃█▃ ",
                                    L"█   ▅ █   █▃█ ",
                                    L"█▅▅ █ █▅▅ █ █ ",
                                    L"╭────────────┬─────┬────┬──────┬───────╮",
@@ -87,9 +90,15 @@ const wchar_t* receipt_header[] = {L"█   ▀ █   ▃█▃ ",
                                    L"╰────────────┴─────┴────┴──────┴───────╯"};
 
 const wchar_t* receipt_footer[] = {
-    L"THANK YOU FOR COMING 💝",
+    L"THANK YOU FOR COMING >3",
     L"Wifi: lila@accessories123",
 };
+// Qrcode with fixed charaters
+std::wstring qr_code[40];
+bool is_open_qrCode = false;
+// Url Path
+std::string URL = "http://127.0.0.1:5000";
+std::string BINARY_PATH = "";
 
 // clang-format on
 void drawBorderWin(WINDOW* win, const bool drawNow = true);
@@ -112,13 +121,19 @@ Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement,
                     unsigned int id);
 Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement, int y,
                     int x);
+
+void initQrcode(std::string url);
+void drawQrCode(WINDOW* win);
 void addItem(WINDOW* win, Item item);
+std::string toBinaryPath(ASCstack* ASC);
+std::string addUrlPath(std::string url, std::string path);
 int main(int argc, char* argv[]) {
   /*
     initialization
   */
   setlocale(LC_ALL, "en_US.UTF-8");
   std::vector<std::pair<WINDOW*, Item>> ItemElement;
+  initQrcode(" ");
 
   /*
     start ncurses
@@ -137,16 +152,20 @@ int main(int argc, char* argv[]) {
   /*
     create window
   */
-  WINDOW* win = newwin(LINES, COLS, 0, 0);
-  WINDOW* receiptItem =
+  WINDOW* mainWindow = newwin(LINES, COLS, 0, 0);
+  WINDOW* receiptItemWindow =
       newwin(LINES - 2, shift_left - 3, 1, COLS - shift_left + 2);
-  WINDOW* Item_window = newwin(LINES - 2, COLS - shift_left - 3, 1, 2);
+  WINDOW* ItemWindow = newwin(LINES - 2, COLS - shift_left - 3, 1, 2);
 
   const int welcome_width = (COLS / 2) <= 64 ? 64 : COLS / 2 - 2;
-  WINDOW* welcome_window = newwin(LINES / 2 - 8, welcome_width, 0, 0);
-  createWindowItem(Item_window, ItemElement);
-  keypad(Item_window, TRUE);
-  keypad(receiptItem, TRUE);
+  WINDOW* welcomeWindow = newwin(LINES / 2 - 8, welcome_width, 0, 0);
+  // const int qr_code_lenght = std::wcslen(qr_code);
+  const int qr_code_lenght = qr_code[0].size();
+  WINDOW* qrCodeWindow =
+      newwin(qr_code_lenght / 2 + 5, qr_code_lenght + 10,
+             LINES / 2 - qr_code_lenght / 2, COLS / 2 - qr_code_lenght / 2);
+  createWindowItem(ItemWindow, ItemElement);
+  keypad(ItemWindow, TRUE);
 
   // init color we needed
   init_pair(1, COLOR_BLACK, 235);          // blck with gray
@@ -167,26 +186,27 @@ int main(int argc, char* argv[]) {
   /*
     set background
   */
-  wbkgd(welcome_window, COLOR_PAIR(53));
-  wbkgd(receiptItem, COLOR_PAIR(11));
-  wbkgd(Item_window, COLOR_PAIR(3));
+  wbkgd(welcomeWindow, COLOR_PAIR(53));
+  wbkgd(receiptItemWindow, COLOR_PAIR(11));
+  wbkgd(ItemWindow, COLOR_PAIR(3));
+  wbkgd(qrCodeWindow, COLOR_PAIR(3));
 
   /*
     Welcome
   */
   for (size_t i = 0; i < COLS / 2 - welcome_width / 2; i++) {
-    mvwin(welcome_window, LINES / 4, i);
-    drawWelcome(welcome_window);
+    mvwin(welcomeWindow, LINES / 4, i);
+    drawWelcome(welcomeWindow);
     napms(6);
 
     if (i == COLS / 2 - welcome_width / 2 - 1)
       break;
 
-    wclear(welcome_window);
-    wrefresh(welcome_window);
-    wclear(win);
-    wrefresh(win);
-    wbkgd(win, COLOR_PAIR(1));
+    wclear(welcomeWindow);
+    wrefresh(welcomeWindow);
+    wclear(mainWindow);
+    wrefresh(mainWindow);
+    wbkgd(mainWindow, COLOR_PAIR(1));
   }
   /*
     clear key buffer
@@ -195,51 +215,64 @@ int main(int argc, char* argv[]) {
   getch();
 
   for (size_t i = 0; i < 20; i++) {
-    mvwin(welcome_window, LINES / 4 + i, COLS / 2 - welcome_width / 2 - 1);
-    drawWelcome(welcome_window);
+    mvwin(welcomeWindow, LINES / 4 + i, COLS / 2 - welcome_width / 2 - 1);
+    drawWelcome(welcomeWindow);
     napms(20);
 
-    wclear(welcome_window);
-    wrefresh(welcome_window);
-    wclear(win);
-    wrefresh(win);
-    wbkgd(win, COLOR_PAIR(1));
+    wclear(welcomeWindow);
+    wrefresh(welcomeWindow);
+    wclear(mainWindow);
+    wrefresh(mainWindow);
+    wbkgd(mainWindow, COLOR_PAIR(1));
   }
 
-  wbkgd(win, COLOR_PAIR(3));
+  wbkgd(mainWindow, COLOR_PAIR(3));
 
   /*
     Team members
   */
-  drawTeamIntro(win);
+  drawTeamIntro(mainWindow);
 
   /*
     clear key buffer
   */
   flushinp();
   getch();
-  wclear(win);
+  wclear(mainWindow);
 
-  wbkgd(win, COLOR_PAIR(22));
+  wbkgd(mainWindow, COLOR_PAIR(22));
 
   // Border
-  drawBorder(win);
+  drawBorder(mainWindow);
 
   // Receipt - Item
-  drawListReceipt(receiptItem);
+  drawListReceipt(receiptItemWindow);
 
   // Receipt - title
   // drawReceiptTitle(win);
 
   // List Available Item
-  drawItem(Item_window, ItemElement);
-  wrefresh(Item_window);
+  drawItem(ItemWindow, ItemElement);
+  wrefresh(ItemWindow);
 
   int input;
-  while ((input = wgetch(Item_window)) != 'q') {
+  while ((input = wgetch(ItemWindow)) != 'q') {
 
     switch (input) {
     case '\n':
+      break;
+    case 'p':
+      if (!is_open_qrCode) {
+
+        initQrcode(addUrlPath(URL, toBinaryPath(ascStack)));
+        drawQrCode(qrCodeWindow);
+        wrefresh(qrCodeWindow);
+        is_open_qrCode = true;
+      } else {
+        drawItem(ItemWindow, ItemElement);
+        wrefresh(ItemWindow);
+        is_open_qrCode = false;
+      }
       break;
     case ' ': {
       if (selected_window_id == 0) {
@@ -248,10 +281,10 @@ int main(int argc, char* argv[]) {
       Item* selected = getWindowItem(ItemElement, selected_window_id);
       if (selected != nullptr) {
         change_selected_item_color(ItemElement, selected_window_id);
-        addItem(receiptItem, *selected);
-        reDrawItem(Item_window, ItemElement, selected_window_id,
+        addItem(receiptItemWindow, *selected);
+        reDrawItem(ItemWindow, ItemElement, selected_window_id,
                    searchProduct(ascStack, selected_window_id)->qty);
-        wrefresh(Item_window);
+        wrefresh(ItemWindow);
       }
     } break;
     case KEY_BACKSPACE: {
@@ -260,40 +293,39 @@ int main(int argc, char* argv[]) {
         break;
       }
       deleteProduct(ascStack, selected_window_id);
-      drawListReceipt(receiptItem);
+      drawListReceipt(receiptItemWindow);
       Item* search_in_receipt = searchProduct(ascStack, selected_window_id);
 
       if (search_in_receipt != nullptr) {
-        reDrawItem(Item_window, ItemElement, selected_window_id,
+        reDrawItem(ItemWindow, ItemElement, selected_window_id,
                    search_in_receipt->qty);
-        wrefresh(Item_window);
+        wrefresh(ItemWindow);
       } else {
 
-        reDrawItem(Item_window, ItemElement, selected_window_id,
-                   0);
-        wrefresh(Item_window);
-        }
+        reDrawItem(ItemWindow, ItemElement, selected_window_id, 0);
+        wrefresh(ItemWindow);
+      }
     } break;
     case KEY_DOWN:
       selected_window_id = (selected_window_id + row_perbox <= numberItem)
                                ? (selected_window_id + row_perbox)
                                : (selected_window_id);
       change_selected_item_color(ItemElement, selected_window_id);
-      wrefresh(receiptItem);
+      wrefresh(receiptItemWindow);
       break;
     case KEY_UP:
       selected_window_id = (selected_window_id > row_perbox)
                                ? (selected_window_id - row_perbox)
                                : (selected_window_id);
       change_selected_item_color(ItemElement, selected_window_id);
-      wrefresh(receiptItem);
+      wrefresh(receiptItemWindow);
       break;
     case KEY_LEFT:
       selected_window_id = (((selected_window_id - 1) % row_perbox) > 0)
                                ? (selected_window_id - 1)
                                : (selected_window_id);
       change_selected_item_color(ItemElement, selected_window_id);
-      wrefresh(receiptItem);
+      wrefresh(receiptItemWindow);
       break;
     case KEY_RIGHT:
       selected_window_id = (((selected_window_id % row_perbox) != 0) ||
@@ -301,7 +333,7 @@ int main(int argc, char* argv[]) {
                                ? (selected_window_id + 1)
                                : (selected_window_id);
       change_selected_item_color(ItemElement, selected_window_id);
-      wrefresh(receiptItem);
+      wrefresh(receiptItemWindow);
       break;
 
     case KEY_MOUSE:
@@ -314,10 +346,10 @@ int main(int argc, char* argv[]) {
           if (selected != nullptr) {
             selected_window_id = selected->ID;
             change_selected_item_color(ItemElement, selected_window_id);
-            addItem(receiptItem, *selected);
-            reDrawItem(Item_window, ItemElement, selected_window_id,
+            addItem(receiptItemWindow, *selected);
+            reDrawItem(ItemWindow, ItemElement, selected_window_id,
                        searchProduct(ascStack, selected_window_id)->qty);
-            wrefresh(Item_window);
+            wrefresh(ItemWindow);
           }
         }
       }
@@ -329,10 +361,10 @@ int main(int argc, char* argv[]) {
   }
 
   reset_color_pairs();
-  delwin(welcome_window);
-  delwin(win);
-  delwin(receiptItem);
-  delwin(Item_window);
+  delwin(welcomeWindow);
+  delwin(mainWindow);
+  delwin(receiptItemWindow);
+  delwin(ItemWindow);
   endwin();
   return 0;
 }
@@ -460,7 +492,7 @@ void drawListReceipt(WINDOW* win) {
     header
   */
   for (size_t i = 0; i < receipt_header_size; i++) {
-    mvwaddwstr(win, current++, receipt_offset_x, receipt_header[i]);
+    mvwaddwstr(win, current++, receipt_offset_x, receiptHeader[i]);
   }
 
   /*
@@ -500,7 +532,7 @@ void drawListReceipt(WINDOW* win) {
       idx++;
       continue;
     }
-    int length = std::wcslen(receipt_header[4]);
+    int length = std::wcslen(receiptHeader[4]);
     mvwprintw(win, current++, 0, "%*s", length, " ");
   }
   mvwaddwstr(win, current++, receipt_items_offset_x,
@@ -528,7 +560,7 @@ void drawListReceipt(WINDOW* win) {
   */
   for (size_t i = 0; i < receipt_footer_size; i++) {
     int center =
-        std::wcslen(receipt_header[5]) / 2 - std::wcslen(receipt_footer[i]) / 2;
+        std::wcslen(receiptHeader[5]) / 2 - std::wcslen(receipt_footer[i]) / 2;
     mvwaddwstr(win, current++, center, receipt_footer[i]);
   }
 
@@ -558,7 +590,6 @@ void createWindowItem(WINDOW* win,
     WINDOW* newin = newwin(
         box_y, box_x, offset_y + win_y_begin + ROWS * box_y + space_y * ROWS,
         offset_x + win_x_begin + COLS * box_x + space_x * COLS);
-    drawBorderWin(newin, false);
     // wrefresh(newin);
     ItemElement.push_back({newin, items[i]});
   }
@@ -579,7 +610,7 @@ void reDrawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement,
 
       // name
       mvwaddstr(newin, (win_y % 2) ? win_y / 2 : win_y / 2 - 1,
-                win_x / 2 - item.name.length() / 2, item.name.c_str());
+                win_x / 2 - item.name.length() / 2, (item.name).c_str());
 
       if (qty > 0) {
         // Quantity
@@ -588,10 +619,9 @@ void reDrawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement,
                   ("x" + std::to_string(qty)).c_str());
       } else {
 
-        // Quantity clear 
+        // Quantity clear
         mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2,
-                  win_x / 2 - std::to_string(qty).length() / 2,
-                  "     ");
+                  win_x / 2 - std::to_string(qty).length() / 2, "     ");
       }
       // ID
       mvwaddstr(newin, 1, 1, ("#" + std::to_string(item.ID)).c_str());
@@ -653,12 +683,14 @@ void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement) {
     // price
     mvwaddstr(newin, win_y - 2, win_x - std::to_string(item.price).length() - 2,
               (std::to_string(item.price) + "$").c_str());
+
+    drawBorderWin(newin);
     wrefresh(newin);
   }
 }
 Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement,
                     unsigned int id) {
-  if (id < 0 || id >= numberItem) {
+  if (id < 0 || id > numberItem) {
     return nullptr;
   }
 
@@ -681,6 +713,42 @@ Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement, int y,
   }
   return nullptr;
 }
+void initQrcode(std::string url) {
+  qrcode = QRcode_encodeString(url.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+  for (size_t i = 0; i < qrcode->width / 2 + 1; i++) {
+    std::wstring tem;
+    for (size_t j = 0; j < qrcode->width; j++) {
+      int bottomidx = i * qrcode->width * 2 + j + qrcode->width;
+      bool bottom = (i * 2 + 1) < qrcode->width;
+      if (qrcode->data[i * qrcode->width * 2 + j] & 1) {
+
+        if ((qrcode->data[bottomidx] & 1) && bottom) {
+          tem += L"█";
+        } else {
+          tem += L"▀";
+        }
+      } else {
+        if ((qrcode->data[(bottomidx)] & 1) && bottom) {
+          tem += L"▄";
+        } else {
+          tem += L" ";
+        }
+      }
+    }
+    qr_code[i] = tem;
+  }
+}
+void drawQrCode(WINDOW* win) {
+  int x, y;
+  getmaxyx(win, y, x);
+  drawBorderWin(win);
+  int rows = 0;
+  int size = qr_code->size();
+  for (auto& line : qr_code) {
+    mvwaddwstr(win, y / 2 - size / 4 + rows, x / 2 - size / 2, line.c_str());
+    rows++;
+  }
+}
 void addItem(WINDOW* win, Item item) {
   if (!checkExist(ascStack, item.ID)) {
     push(ascStack, item, 1, item.price * 1);
@@ -690,4 +758,20 @@ void addItem(WINDOW* win, Item item) {
                   item.qty);
     drawListReceipt(win);
   }
+}
+
+std::string toBinaryPath(ASCstack* ASC) {
+  std::string BinaryPath;
+  for (size_t i = 1; i <= numberItem; i++) {
+    Item* item = searchProduct(ASC, i);
+    if (!(item == nullptr)) {
+      BinaryPath += "1";
+    } else {
+      BinaryPath += "0";
+    }
+  }
+  return BinaryPath;
+}
+std::string addUrlPath(std::string url, std::string path) {
+  return url + "/" + path;
 }

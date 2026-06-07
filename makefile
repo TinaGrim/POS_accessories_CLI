@@ -1,5 +1,5 @@
-scrs = main.cpp mystack.cpp Items.cpp 
-flags = -lncursesw
+scrs = main.cpp scr/mystack.cpp scr/Items.cpp 
+flags = -lncursesw -lqrencode
 target = main
 
 
