@@ -773,5 +773,5 @@ std::string toBinaryPath(ASCstack* ASC) {
   return BinaryPath;
 }
 std::string addUrlPath(std::string url, std::string path) {
-  return url + "/" + path;
+  return url + "/items/" + path;
 }

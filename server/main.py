@@ -29,6 +29,6 @@ def data(data: str):
             20: 'Hat'}
     orderList = [Item[i] for i, char in enumerate(data) if char != "0"]
 
-    return orderList
+    return render_template('items.html', items=orderList, count=len(orderList))
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000,debug=False);

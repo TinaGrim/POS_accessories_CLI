@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Order Payment</title>
+    <link href="/static/items.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="payment">
+      <div class="title">
+        <h1>Your Order</h1>
+      </div>
+      {% if items %}
+      <ul class="item-list">
+        {% for item in items %}
+        <li>{{item}}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty">
+        <h4>No Order yet</h4>
+      </div>
+      {% endif %}
+      <div class="confirm">
+        <form action='/'>
+          <button class="procced">procced</button>
+        </form>
+      </div>
+    </div>
+
+  </body>
+</html>

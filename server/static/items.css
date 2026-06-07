@@ -1,0 +1,42 @@
+* {
+  padding: 0;
+  margin: 0;
+}
+body {
+  background-color: rgba(111, 191, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  min-height: 100vh;
+}
+.payment {
+  width: 100%;
+}
+.title {
+  background-color: rgb(120,120,120);
+  text-align:center;
+  border-radius: 10px;
+  padding: 20px 0;
+  width: 100%;
+}
+.item-list {
+  list-style: none;
+  text-align: left;
+  margin: 0 auto;
+  width: fit-content;
+  margin-bottom: 10px;
+}
+
+.item-list li{
+  margin: 10px 0;
+  background-color: rgb(130, 99, 71);
+  padding: 20px 40px;
+  border-radius: 10px;
+  box-shadow: 5px 10px 30px rgba(130, 99, 71, 0.9);
+  
+}
+.procced {
+  background-color: rgba(72, 255, 103, 0.8);
+  padding: 10px 20px;
+  border-radius: 5px;
+}

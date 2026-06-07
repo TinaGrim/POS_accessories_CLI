@@ -1,0 +1,23 @@
+* {
+  padding: 0px;
+  margin: 0px;
+}
+body {
+  background-color: rgb(240, 240, 240);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.header {
+  background-color: rgb(120,120,120);
+  padding: 20px 30px;
+  border-radius: 10px;
+}
+h3 {
+  color: black;
+  font-size: 30px;
+  margin: 0;
+  text-align: center;
+}
+
