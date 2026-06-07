@@ -34,29 +34,14 @@ Item* pop(ASCstack* s);
 // Get Item At
 Item* getItemAt(ASCstack* s, const int ID);
 
-// READ
-// void displayProducts(ASCstack* s) {
-//
-//   if (isEmpty(s)) {
-//     return;
-//   }
-//
-//   ASC* temp = s->top;
-//
-//
-//   while (temp != nullptr) {
-//
-//
-//     temp = temp->next;
-//   }
-// }
-
 // SEARCH
 Item* searchProduct(ASCstack* s, int searchID);
 
 // UPDATE
-bool updateProduct(ASCstack* s,unsigned int updateID, std::string name,std::string size, unsigned int price,unsigned int qty);
+bool updateProduct(ASCstack* s, unsigned int updateID, std::string name,
+                   std::string size, unsigned int price, unsigned int qty);
 
+bool addexistProduct(ASCstack* s, unsigned int ID);
 // DELETE
 bool deleteProduct(ASCstack* s, int deleteID);
 int Summation(ASCstack* c);

@@ -17,7 +17,6 @@ bool isEmpty(ASCstack* s) { return s->top == nullptr; }
 
 // Push
 void push(ASCstack* s, Item item) {
-
   ASC* newNode = new ASC;
 
   newNode->item = item;
@@ -107,22 +106,6 @@ Item* getItemAt(ASCstack* s, const int ID) {
 
   return &temp->item;
 }
-// READ
-// void displayProducts(ASCstack* s) {
-//
-//   if (isEmpty(s)) {
-//     return;
-//   }
-//
-//   ASC* temp = s->top;
-//
-//
-//   while (temp != nullptr) {
-//
-//
-//     temp = temp->next;
-//   }
-// }
 
 // SEARCH
 Item* searchProduct(ASCstack* s, int searchID) {
@@ -161,7 +144,7 @@ bool updateProduct(ASCstack* s, unsigned int updateID, std::string name,
       temp->item.name = name;
       temp->item.ID = updateID;
       temp->item.price = price;
-      temp->item.qty++;
+      temp->item.qty = qty;
       temp->item.size = size;
       temp->item.Amount = temp->item.price * temp->item.qty;
 
@@ -173,6 +156,26 @@ bool updateProduct(ASCstack* s, unsigned int updateID, std::string name,
   return false;
 }
 
+// exist product
+bool addexistProduct(ASCstack* s, unsigned int ID) {
+
+  if (isEmpty(s)) {
+    return false;
+  }
+
+  ASC* temp = s->top;
+
+  while (temp != nullptr) {
+
+    if (temp->item.ID == ID) {
+      temp->item.qty++;
+      temp->item.Amount = temp->item.price * temp->item.qty;
+      return true;
+    }
+    temp = temp->next;
+  }
+  return false;
+}
 // DELETE
 bool deleteProduct(ASCstack* s, int deleteID) {
 
