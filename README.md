@@ -9,12 +9,22 @@ capability with old hardware allow low-end pc run soomthly
 
 ## Installation
 
-### 1. Install dependencies (Arch Linux)
+### 1. Install dependencies
+
+### (Arch Linux)
 
 ```bash
+yay -S ncurses qrencode make git g++
 git clone https://github.com/TinaGrim/POS_accessories_CLI.git
 cd POS_accessories_CLI
-yay -S ncurses qrencode
+```
+
+### (Debian)
+
+```bash
+sudo apt update && sudo apt install libncurses-dev libqrencode-dev make git g++
+git clone https://github.com/TinaGrim/POS_accessories_CLI.git
+cd POS_accessories_CLI
 ```
 
 ### 2. Run Program
