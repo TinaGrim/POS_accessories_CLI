@@ -1,4 +1,4 @@
-scrs = main.cpp scr/mystack.cpp scr/Items.cpp util/urlpath.cpp util/windowmanager.cpp
+scrs = main.cpp scr/mystack.cpp scr/Items.cpp util/urlpath.cpp scr/windowmanager.cpp
 flags = -lncursesw -lqrencode
 target = main
 
