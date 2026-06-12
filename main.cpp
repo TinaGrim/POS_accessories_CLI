@@ -1,18 +1,15 @@
 #include <clocale>
-#include <cstddef>
-#include <cstdio>
 #include <cstring>
 #include <cwchar>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "include/Items.h"
 #include "include/mystack.h"
+#include "include/windowmanager.h"
 #include "ncurses.h"
 #include "qrencode.h"
 #include "util/urlpath.h"
-#include "util/windowmanager.h"
 #include "wchar.h"
 
 /*
@@ -116,7 +113,6 @@ std::string BINARY_PATH = "";
 void drawBorderWin(WINDOW* win, const bool drawNow = true);
 void drawBorder(WINDOW* win, const bool drawNow = true);
 void drawTeamIntro(WINDOW* win);
-void drawWelcome(WINDOW* win);
 void drawReceiptTitle(WINDOW* win);
 void drawListReceipt(WINDOW* win);
 void createWindowItem(WINDOW* win,
@@ -127,7 +123,8 @@ void change_selected_item_color(
 
 void reDrawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement,
                 unsigned ID, unsigned int qty);
-void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement);
+void drawItem(WINDOW* win, ASCstack* AS,
+              std::vector<std::pair<WINDOW*, Item>>& ItemElement);
 
 Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement,
                     unsigned int id);
@@ -195,24 +192,18 @@ int main(int argc, char* argv[]) {
   wbkgd(receiptItemWindow, COLOR_PAIR(11));
   wbkgd(ItemWindow, COLOR_PAIR(3));
   wbkgd(qrCodeWindow, COLOR_PAIR(3));
+  refresh();
+
+  /*
+    write content into welcomeWindow
+  */
+  WM.drawWelcome(welcomeWindow, welcome);
 
   /*
     Welcome slide in animations
   */
-  for (size_t i = 0; i < COLS / 2 - WM.getWelcomePadding() / 2; i++) {
-    mvwin(welcomeWindow, LINES / 4, i);
-    drawWelcome(welcomeWindow);
-    napms(6);
 
-    if (i == COLS / 2 - WM.getWelcomePadding() / 2 - 1)
-      break;
-
-    wclear(welcomeWindow);
-    wrefresh(welcomeWindow);
-    wclear(mainWindow);
-    wrefresh(mainWindow);
-    wbkgd(mainWindow, COLOR_PAIR(1));
-  }
+  WM.animationSlide(welcomeWindow, 0, COLS / 2 - WM.getWelcomeWidth() / 2);
   /*
     clear key buffer
   */
@@ -222,20 +213,9 @@ int main(int argc, char* argv[]) {
   /*
     Welcome slide out animations
   */
-  for (size_t i = 0; i < 20; i++) {
-    mvwin(welcomeWindow, LINES / 4 + i,
-          COLS / 2 - WM.getWelcomePadding() / 2 - 1);
-    drawWelcome(welcomeWindow);
-    napms(20);
+  WM.animationSlide(welcomeWindow, LINES / 2, 0);
 
-    wclear(welcomeWindow);
-    wrefresh(welcomeWindow);
-    wclear(mainWindow);
-    wrefresh(mainWindow);
-    wbkgd(mainWindow, COLOR_PAIR(1));
-  }
-
-  wbkgd(mainWindow, COLOR_PAIR(3));
+  wbkgd(mainWindow, COLOR_PAIR(3)); // black with white
 
   /*
     Team members
@@ -251,15 +231,20 @@ int main(int argc, char* argv[]) {
 
   wbkgd(mainWindow, COLOR_PAIR(22));
 
-  // Border
+  /*
+    Draw line on border
+  */
   drawBorder(mainWindow);
 
-  // Receipt - Item
+  /*
+   Receipt - Item (right panel)
+  */
   drawListReceipt(receiptItemWindow);
 
-  // List Available Item
-  drawItem(ItemWindow, ItemElement);
-  wrefresh(ItemWindow);
+  /*
+    List Available Item
+  */
+  drawItem(ItemWindow, ascStack, ItemElement);
 
   int input;
   while ((input = wgetch(ItemWindow)) != 'q') {
@@ -269,28 +254,47 @@ int main(int argc, char* argv[]) {
       break;
     case 'p':
       if (!is_open_qrCode) {
+
         /*
           Display Qr code
         */
-
         initQrcode(addUrlPath(URL, toBinaryPath(ascStack, numberItem)));
         drawQrCode(qrCodeWindow);
         wrefresh(qrCodeWindow);
         is_open_qrCode = true;
       } else {
-        drawItem(ItemWindow, ItemElement);
+
+        /*
+          If already show qr then close it back
+        */
+        drawItem(ItemWindow, ascStack, ItemElement);
         wrefresh(ItemWindow);
         is_open_qrCode = false;
       }
       break;
     case ' ': {
+
+      /*
+        Add Item into stack receipt
+      */
       if (selected_window_id == 0) {
         break;
       }
       Item* selected = getWindowItem(ItemElement, selected_window_id);
       if (selected != nullptr) {
+        /*
+          highlight color
+        */
         change_selected_item_color(ItemElement, selected_window_id);
+
+        /*
+          Add item
+        */
         addItem(receiptItemWindow, *selected);
+
+        /*
+          Draw on the screen
+        */
         reDrawItem(ItemWindow, ItemElement, selected_window_id,
                    searchProduct(ascStack, selected_window_id)->qty);
         wrefresh(ItemWindow);
@@ -306,11 +310,17 @@ int main(int argc, char* argv[]) {
       Item* search_in_receipt = searchProduct(ascStack, selected_window_id);
 
       if (search_in_receipt != nullptr) {
+        /*
+          Draw on the screen
+        */
         reDrawItem(ItemWindow, ItemElement, selected_window_id,
                    search_in_receipt->qty);
         wrefresh(ItemWindow);
       } else {
 
+        /*
+          Draw on the screen
+        */
         reDrawItem(ItemWindow, ItemElement, selected_window_id, 0);
         wrefresh(ItemWindow);
       }
@@ -319,6 +329,9 @@ int main(int argc, char* argv[]) {
       selected_window_id = (selected_window_id + row_perbox <= numberItem)
                                ? (selected_window_id + row_perbox)
                                : (selected_window_id);
+      /*
+        highlight color
+      */
       change_selected_item_color(ItemElement, selected_window_id);
       wrefresh(receiptItemWindow);
       break;
@@ -326,6 +339,9 @@ int main(int argc, char* argv[]) {
       selected_window_id = (selected_window_id > row_perbox)
                                ? (selected_window_id - row_perbox)
                                : (selected_window_id);
+      /*
+        highlight color
+      */
       change_selected_item_color(ItemElement, selected_window_id);
       wrefresh(receiptItemWindow);
       break;
@@ -333,6 +349,9 @@ int main(int argc, char* argv[]) {
       selected_window_id = (((selected_window_id - 1) % row_perbox) > 0)
                                ? (selected_window_id - 1)
                                : (selected_window_id);
+      /*
+        highlight color
+      */
       change_selected_item_color(ItemElement, selected_window_id);
       wrefresh(receiptItemWindow);
       break;
@@ -341,6 +360,9 @@ int main(int argc, char* argv[]) {
                             (selected_window_id == 0))
                                ? (selected_window_id + 1)
                                : (selected_window_id);
+      /*
+        highlight color
+      */
       change_selected_item_color(ItemElement, selected_window_id);
       wrefresh(receiptItemWindow);
       break;
@@ -354,8 +376,17 @@ int main(int argc, char* argv[]) {
           Item* selected = getWindowItem(ItemElement, mevent.y, mevent.x);
           if (selected != nullptr) {
             selected_window_id = selected->ID;
+            /*
+              highlight color
+            */
             change_selected_item_color(ItemElement, selected_window_id);
+            /*
+              Add item
+            */
             addItem(receiptItemWindow, *selected);
+            /*
+              Draw on the screen
+            */
             reDrawItem(ItemWindow, ItemElement, selected_window_id,
                        searchProduct(ascStack, selected_window_id)->qty);
             wrefresh(ItemWindow);
@@ -369,6 +400,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  /*
+    free allocated pointer
+  */
   reset_color_pairs();
   delwin(welcomeWindow);
   delwin(mainWindow);
@@ -378,6 +412,9 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 void drawBorderWin(WINDOW* win, bool drawNow) {
+  /*
+    Draw border on the window
+  */
   int x, y;
   getmaxyx(win, y, x);
 
@@ -394,12 +431,12 @@ void drawBorderWin(WINDOW* win, bool drawNow) {
     mvwaddstr(win, 0, i, "─");
     mvwaddstr(win, y - 1, i, "─");
   }
-  if (drawNow)
-    wrefresh(win);
-  refresh();
 }
 
 void drawBorder(WINDOW* win, bool drawNow) {
+  /*
+    Draw line
+  */
   int rows, cols;
   getmaxyx(win, rows, cols);
   wmove(win, 0, cols - shift_left);
@@ -409,10 +446,13 @@ void drawBorder(WINDOW* win, bool drawNow) {
     wrefresh(win);
 }
 void drawTeamIntro(WINDOW* win) {
-
+  /*
+    Team members
+  */
   int cols, rows;
   getmaxyx(win, rows, cols);
   int ROWS = 6;
+
   /*
     team
   */
@@ -420,6 +460,7 @@ void drawTeamIntro(WINDOW* win) {
     mvwaddwstr(win, i + rows / 9, cols / 2 - wcslen(team[0]) / 2, team[i]);
   }
   wrefresh(win);
+
   /*
     team + tina
   */
@@ -445,6 +486,7 @@ void drawTeamIntro(WINDOW* win) {
     wrefresh(win);
     napms(5);
   }
+
   /*
     team + tina + len + joly
   */
@@ -460,20 +502,6 @@ void drawTeamIntro(WINDOW* win) {
     wrefresh(win);
     napms(1);
   }
-  wrefresh(win);
-}
-void drawWelcome(WINDOW* win) {
-  int x, y;
-  getmaxyx(win, y, x);
-  int ROWS = 6;
-  for (int i = 0; i < ROWS; i++) {
-    mvwaddwstr(win, (y / 2) - 3 + i, x / 2 - wcslen(welcome[0]) / 2,
-               welcome[i]);
-  }
-  wattron(win, COLOR_PAIR(3));
-  drawBorderWin(win);
-  wattroff(win, COLOR_PAIR(3));
-
   wrefresh(win);
 }
 void drawReceiptTitle(WINDOW* win) {
@@ -657,10 +685,11 @@ void change_selected_item_color(
   }
 }
 
-void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement) {
+void drawItem(WINDOW* win, ASCstack* AS,
+              std::vector<std::pair<WINDOW*, Item>>& ItemElement) {
   int cols, rows;
-
   int win_x_begin, win_y_begin;
+
   getmaxyx(win, rows, cols);
   getbegyx(win, win_y_begin, win_x_begin);
   drawBorderWin(win);
@@ -676,13 +705,16 @@ void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement) {
   }
   wattroff(win, COLOR_PAIR(227));
 
+  wrefresh(win);
   /*
     Draw all Items
   */
   for (auto& [newin, item] : ItemElement) {
+    Item* ascItem = searchProduct(AS, item.ID);
     int win_y, win_x;
     getmaxyx(newin, win_y, win_x);
-
+    werase(newin);
+    drawBorderWin(newin);
     wbkgd(newin, COLOR_PAIR(3));
 
     // name
@@ -692,11 +724,27 @@ void drawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement) {
     // ID
     mvwaddstr(newin, 1, 1, ("#" + std::to_string(item.ID)).c_str());
 
+    if (!(ascItem == nullptr)) {
+      std::string qtyString = std::to_string(ascItem->qty);
+      int qtyLength = qtyString.length();
+      if (ascItem->qty > 0) {
+        // Quantity
+        mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2,
+                  win_x / 2 - qtyLength / 2, ("x" + qtyString).c_str());
+      } else {
+        // Quantity clear
+        mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2, win_x / 2 - 5,
+                  "     ");
+      }
+    } else {
+
+      // Quantity clear
+      mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2, win_x / 2 - 5,
+                "     ");
+    }
     // price
     mvwaddstr(newin, win_y - 2, win_x - std::to_string(item.price).length() - 2,
               (std::to_string(item.price) + "$").c_str());
-
-    drawBorderWin(newin);
     wrefresh(newin);
   }
 }
