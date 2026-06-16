@@ -1,5 +1,9 @@
 #include "../include/windowmanager.h"
-#include "ncurses.h"
+#ifdef _WIN32
+#include <ncursesw/ncurses.h>
+#else
+#include <ncurses.h>
+#endif // _WIN32
 #include <cmath>
 #include <cstddef>
 #include <wchar.h>
