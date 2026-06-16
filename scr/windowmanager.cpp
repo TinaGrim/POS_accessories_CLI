@@ -1,4 +1,4 @@
-#include "windowmanager.h"
+#include "../include/windowmanager.h"
 #include "ncurses.h"
 #include <cmath>
 #include <cstddef>
