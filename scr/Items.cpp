@@ -14,9 +14,15 @@ std::vector<Item> getItemFrom(std::string filename, int n) {
   infile.open(filename);
   std::vector<Item> items;
 
+  /*
+    Is file open?
+  */
   if (!infile.is_open()) {
     return items;
   }
+  /*
+    extract by each line
+  */
   while (getline(infile, line) && count < n) {
     if (line.empty())
       continue;

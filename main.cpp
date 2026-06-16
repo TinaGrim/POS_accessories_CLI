@@ -7,7 +7,11 @@
 #include "include/Items.h"
 #include "include/mystack.h"
 #include "include/windowmanager.h"
-#include "ncurses.h"
+#ifdef _WIN32
+#include <ncursesw/ncurses.h>
+#else
+#include <ncurses.h>
+#endif // _WIN32
 #include "qrencode.h"
 #include "util/urlpath.h"
 #include "wchar.h"
