@@ -8,7 +8,11 @@ capability with old hardware allow low-end pc run soomthly
 ## Image
 
 ![main](./screenshot/pos_system_main.jpg)
-![welcome](./screenshot/pos_system_main.jpg) ![members](./screenshot/pos_system_members.jpg)
+
+<p align="center">
+  <img src="./screenshot/pos_system_welcome.jpg" width="45%"/>
+  <img src="./screenshot/pos_system_members.jpg" width="45%"/>
+</p>
 
 ---
 
