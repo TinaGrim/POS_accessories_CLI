@@ -4,14 +4,16 @@
 #include <string>
 #include <vector>
 
-#include "include/Items.h"
-#include "include/mystack.h"
-#include "include/windowmanager.h"
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
 #include <ncursesw/ncurses.h>
 #else
 #include <ncurses.h>
 #endif // _WIN32
+
+#include "include/Items.h"
+#include "include/mystack.h"
+#include "include/windowmanager.h"
+
 #include "qrencode.h"
 #include "util/urlpath.h"
 #include "wchar.h"
@@ -177,6 +179,21 @@ int main(int argc, char* argv[]) {
     init color we needed
     text color with background color
   */
+
+#if defined(_WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
+  init_pair(1, COLOR_BLACK, COLOR_BLACK);    // black with black
+  init_pair(2, COLOR_WHITE, COLOR_BLACK);    // white with black
+  init_pair(3, COLOR_BLACK, COLOR_BLACK);    // black with black
+  init_pair(4, COLOR_BLACK, COLOR_BLACK);    // black with black
+  init_pair(5, COLOR_BLACK, COLOR_WHITE);    // black with white
+  init_pair(53, COLOR_MAGENTA, COLOR_WHITE); // purple with white
+  init_pair(54, COLOR_BLACK, COLOR_WHITE);   // black with white
+  init_pair(227, COLOR_YELLOW, COLOR_BLACK); // yellow with gray
+  init_pair(11, COLOR_BLACK, COLOR_YELLOW);  // back with yellow
+  init_pair(15, COLOR_WHITE, COLOR_WHITE);   // white with white
+  init_pair(22, COLOR_BLACK, COLOR_BLUE);    // black with deepblue
+#else
+
   init_pair(1, COLOR_BLACK, 235);          // blck with gray
   init_pair(2, COLOR_WHITE, 243);          // white with gray
   init_pair(3, COLOR_BLACK, 15);           // black with white
@@ -188,6 +205,7 @@ int main(int argc, char* argv[]) {
   init_pair(11, COLOR_BLACK, 11);          // back with yellow
   init_pair(15, 15, 15);                   // white with white
   init_pair(22, COLOR_BLACK, 17);          // black with deepblue
+#endif // _WIN32
 
   /*
     set background
@@ -539,7 +557,7 @@ void drawListReceipt(WINDOW* win) {
   /*
     Items
   */
-  receipt_items_size = y - (current + 1) - 7;
+  receipt_items_size = y - (current + 1) - 8;
   int idx = 0;
   for (size_t i = 0; i < receipt_items_size; i++) {
     Item* item = getItemAt(ascStack, idx);
@@ -581,6 +599,9 @@ void drawListReceipt(WINDOW* win) {
     total
   */
   int total = Summation(ascStack);
+  float tax_ = tax(float(total));
+  int total_after_tax = total + tax_;
+
   mvwprintw(win, current, receipt_items_offset_x, "TOTAL ($):");
   mvwprintw(win, current++, col_amount, "%7s",
             (std::to_string(total) + " $").c_str());
@@ -591,10 +612,14 @@ void drawListReceipt(WINDOW* win) {
 
   mvwaddwstr(win, current++, receipt_items_offset_x,
              L"─────────────────────────────────────────");
+
+  mvwprintw(win, current, col_qty, "%10s", "Tax: ");
+  mvwprintw(win, current++, col_amount, "%7s", "10 %");
   mvwprintw(win, current, receipt_items_offset_x, "(1$=4100R)");
-  mvwprintw(win, current, col_qty, "By card: ");
+  mvwprintw(win, current, col_qty, "%10s", "By card: ");
   mvwprintw(win, current++, col_amount, "%7s",
-            (std::to_string(total) + " $").c_str());
+            (std::to_string(total_after_tax) + " $").c_str());
+
   /*
     footer
   */

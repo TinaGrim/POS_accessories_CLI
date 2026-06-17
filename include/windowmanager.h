@@ -3,7 +3,7 @@
 
 #include "../include/Items.h"
 #include "../include/mystack.h"
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
 #include <ncursesw/ncurses.h>
 #else
 #include <ncurses.h>
