@@ -1,6 +1,6 @@
 ifeq ($(OS), Windows_NT)
 	target = main.exe
-	remove = del /q
+	remove = if exit $(target) del $(target)
 else
 	target = main
 	remove = rm -f
@@ -19,4 +19,4 @@ run: $(target)
 	./$(target)
 
 clean: 
-	$(remove) $(target)
+	$(remove)
