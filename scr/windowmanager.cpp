@@ -1,5 +1,9 @@
 #include "../include/windowmanager.h"
-#include "ncurses.h"
+#if defined(_WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
+#include <ncursesw/ncurses.h>
+#else
+#include <ncurses.h>
+#endif // _WIN32
 #include <cmath>
 #include <cstddef>
 #include <wchar.h>
@@ -9,6 +13,7 @@ windowManager::windowManager(int shift_left, int qrcodelength)
   mainWindow = nullptr;
   receiptItemWindow = nullptr;
   ItemWindow = nullptr;
+  InstructionWindow = nullptr;
   welcomeWindow = nullptr;
   qrCodeWindow = nullptr;
 }
@@ -18,6 +23,7 @@ void windowManager::init() {
   receiptItemWindow =
       newwin(LINES - 2, shift_left - 3, 1, COLS - shift_left + 2);
   ItemWindow = newwin(LINES - 2, COLS - shift_left - 3, 1, 2);
+  InstructionWindow = newwin(11, COLS / 3, 1, COLS - COLS / 3 - 2);
 
   welcomePadding = (COLS / 2) <= 64 ? 64 : COLS / 2 - 2;
   welcomeWindow = newwin(LINES / 2 - 8, welcomePadding, LINES / 4, 0);
@@ -30,6 +36,7 @@ int windowManager::getWelcomeWidth() { return welcomePadding; }
 WINDOW* windowManager::getmainWindow() { return mainWindow; }
 WINDOW* windowManager::getreceiptItemWindow() { return receiptItemWindow; }
 WINDOW* windowManager::getItemWindow() { return ItemWindow; }
+WINDOW* windowManager::getInstructionWindow() { return InstructionWindow; }
 WINDOW* windowManager::getwelcomeWindow() { return welcomeWindow; }
 WINDOW* windowManager::getqrCodeWindow() { return qrCodeWindow; }
 void windowManager::mvWinTo(WINDOW* win, int y, int x) {

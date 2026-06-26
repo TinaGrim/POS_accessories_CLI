@@ -3,7 +3,7 @@
 
 #include "../include/Items.h"
 #include "../include/mystack.h"
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
 #include <ncursesw/ncurses.h>
 #else
 #include <ncurses.h>
@@ -15,6 +15,7 @@ private:
   WINDOW* mainWindow;
   WINDOW* receiptItemWindow;
   WINDOW* ItemWindow;
+  WINDOW* InstructionWindow;
   WINDOW* welcomeWindow;
   WINDOW* qrCodeWindow;
   int welcomePadding;
@@ -28,6 +29,7 @@ public:
   WINDOW* getmainWindow();
   WINDOW* getreceiptItemWindow();
   WINDOW* getItemWindow();
+  WINDOW* getInstructionWindow();
   WINDOW* getwelcomeWindow();
   WINDOW* getqrCodeWindow();
   void mvWinTo(WINDOW* win, int y, int x);

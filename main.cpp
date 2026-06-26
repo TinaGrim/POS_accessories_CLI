@@ -1,18 +1,22 @@
 #include <clocale>
 #include <cstring>
 #include <cwchar>
+#include <iterator>
 #include <string>
 #include <vector>
 
-#include "include/Items.h"
-#include "include/mystack.h"
-#include "include/windowmanager.h"
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
 #include <ncursesw/ncurses.h>
 #else
 #include <ncurses.h>
 #endif // _WIN32
+
+#include "include/Items.h"
+#include "include/login.h"
+#include "include/mystack.h"
+#include "include/windowmanager.h"
 #include "qrencode.h"
+#include "util/myString.h"
 #include "util/urlpath.h"
 #include "wchar.h"
 
@@ -32,7 +36,7 @@ constexpr int space_y = (Itemrows > 3) ? 0 : 1;
 /*
   Import data
 */
-const std::vector<Item> items = getItemFrom("Items.csv", numberItem);
+const std::vector<Item> items = getItemFrom("./data/Items.csv", numberItem);
 int selected_window_id = 0;
 ASCstack* ascStack = createEmptyStack();
 
@@ -89,6 +93,16 @@ const wchar_t* receipt[] = {L" ___            _      _   ",
                             L"  |   / -_) _/ -_) | '_ \\  _|",
                             L"  |_|_\\___\\__\\___|_| .__/\\__|",
                             L"                   |_|"};
+
+const wchar_t* instruction[] = {L"• Space           Adding item.",
+                                L"• Back Space      Deleting item.",
+                                L"• UP (arrow)      Moving to top.",
+                                L"• DOWN (arrow)    Moving to bottom.",
+                                L"• LEFT (arrow)    Moving to left.",
+                                L"• RIGHT (arrow)   Moving to right.",
+                                L"• ENTER           save receipt.",
+                                L"• p               print QR code.",
+                                L"• q               exit the program."};
 const wchar_t* receiptHeader[] = { L"█   ▀ █   ▃█▃ ",
                                    L"█   ▅ █   █▃█ ",
                                    L"█▅▅ █ █▅▅ █ █ ",
@@ -129,6 +143,7 @@ void reDrawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement,
                 unsigned ID, unsigned int qty);
 void drawItem(WINDOW* win, ASCstack* AS,
               std::vector<std::pair<WINDOW*, Item>>& ItemElement);
+void drawInstruction(WINDOW* win);
 
 Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement,
                     unsigned int id);
@@ -144,6 +159,9 @@ int main(int argc, char* argv[]) {
   */
   setlocale(LC_ALL, "en_US.UTF-8");
   std::vector<std::pair<WINDOW*, Item>> ItemElement;
+  LoginManager LM;
+  LM.getAccountFrom("./data/Account.csv");
+
   initQrcode(" ");
 
   /*
@@ -158,7 +176,7 @@ int main(int argc, char* argv[]) {
   start_color();
   mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
   MEVENT mevent;
-  noecho();
+  echo();
 
   /*
     create window
@@ -168,6 +186,7 @@ int main(int argc, char* argv[]) {
   WINDOW* mainWindow = WM.getmainWindow();
   WINDOW* receiptItemWindow = WM.getreceiptItemWindow();
   WINDOW* ItemWindow = WM.getItemWindow();
+  WINDOW* InstructionWindow = WM.getInstructionWindow();
   WINDOW* welcomeWindow = WM.getwelcomeWindow();
   WINDOW* qrCodeWindow = WM.getqrCodeWindow();
   createWindowItem(ItemWindow, ItemElement);
@@ -177,26 +196,75 @@ int main(int argc, char* argv[]) {
     init color we needed
     text color with background color
   */
-  init_pair(1, COLOR_BLACK, 235);          // blck with gray
+
+#if defined(_WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
+  init_pair(1, COLOR_WHITE, COLOR_BLACK);    // black with black
+  init_pair(2, COLOR_WHITE, COLOR_BLACK);    // white with black
+  init_pair(3, COLOR_WHITE, COLOR_BLACK);    // black with black
+  init_pair(4, COLOR_WHITE, COLOR_BLACK);    // black with black
+  init_pair(5, COLOR_BLACK, COLOR_WHITE);    // black with white
+  init_pair(53, COLOR_MAGENTA, COLOR_WHITE); // purple with white
+  init_pair(54, COLOR_BLACK, COLOR_WHITE);   // black with white
+  init_pair(227, COLOR_YELLOW, COLOR_BLACK); // yellow with gray
+  init_pair(11, COLOR_BLACK, COLOR_YELLOW);  // black with yellow
+  init_pair(15, COLOR_BLACK, COLOR_WHITE);   // black with white23
+  init_pair(22, COLOR_BLACK, COLOR_BLUE);    // black with deepblue
+  init_pair(248, COLOR_BLACK, 248);          // black with gray
+#else
+
+  init_pair(1, COLOR_BLACK, 235);          // black with gray
   init_pair(2, COLOR_WHITE, 243);          // white with gray
-  init_pair(3, COLOR_BLACK, 15);           // black with white
+  init_pair(3, COLOR_BLACK, 230);          // black with white
   init_pair(4, COLOR_BLACK, 243);          // black with gray
   init_pair(5, 236, COLOR_WHITE);          // gray with white
   init_pair(53, 53, COLOR_WHITE);          // purple with white
   init_pair(54, COLOR_BLACK, COLOR_WHITE); // black with white
   init_pair(227, 186, 245);                // yellow with gray
-  init_pair(11, COLOR_BLACK, 11);          // back with yellow
-  init_pair(15, 15, 15);                   // white with white
+  init_pair(11, COLOR_BLACK, 11);          // black with yellow
+  init_pair(15, COLOR_BLACK, 231);         // black with white
   init_pair(22, COLOR_BLACK, 17);          // black with deepblue
+  init_pair(248, COLOR_BLACK, 248);        // black with gray
+#endif // _WIN32
 
   /*
     set background
   */
   wbkgd(welcomeWindow, COLOR_PAIR(53));
-  wbkgd(receiptItemWindow, COLOR_PAIR(11));
+  wbkgd(receiptItemWindow, COLOR_PAIR(15));
   wbkgd(ItemWindow, COLOR_PAIR(3));
+  wbkgd(InstructionWindow, COLOR_PAIR(248));
   wbkgd(qrCodeWindow, COLOR_PAIR(3));
   refresh();
+
+  addstr("============System Account login============\n");
+  addstr("Email: ");
+  std::string email = getnString();
+
+  if (!LM.isExistsEmail(email)) {
+    addstr("============This account haven't create yet !============\n");
+    Login* tem = createEmpty();
+
+    addstr("Name :");
+    tem->name = getnString();
+    addstr("Id :");
+    tem->id = std::stoi(getnString());
+    addstr("Gender :");
+    tem->gender = getnString()[0];
+    addstr("Age :");
+    tem->age = std::stoi(getnString());
+    addstr("Phone number :");
+    tem->phone = std::stoi(getnString());
+    tem->email = email;
+    LM.append(tem->name, tem->id, tem->gender, tem->age, tem->phone,
+              tem->email);
+    LM.saveLast("./data/Account.csv");
+    addstr("\nCreated successfully.\n");
+    refresh();
+  } else {
+    addstr("\n============successfully login============\n");
+    refresh();
+  }
+  napms(300);
 
   /*
     write content into welcomeWindow
@@ -231,7 +299,7 @@ int main(int argc, char* argv[]) {
   */
   flushinp();
   getch();
-  wclear(mainWindow);
+  // wclear(mainWindow);
 
   wbkgd(mainWindow, COLOR_PAIR(22));
 
@@ -250,11 +318,41 @@ int main(int argc, char* argv[]) {
   */
   drawItem(ItemWindow, ascStack, ItemElement);
 
+  /*
+    Instruction
+  */
+  drawInstruction(InstructionWindow);
+
+  /*
+    Waiting for any input
+  */
+  getch();
+
+  /*
+    Draw line on border
+  */
+  werase(mainWindow);
+  wbkgd(mainWindow, COLOR_PAIR(22));
+  drawBorder(mainWindow);
+
+  /*
+   Receipt - Item (right panel)
+  */
+  drawListReceipt(receiptItemWindow);
+
+  /*
+    List Available Item
+  */
+  drawItem(ItemWindow, ascStack, ItemElement);
+
   int input;
   while ((input = wgetch(ItemWindow)) != 'q') {
 
     switch (input) {
     case '\n':
+      mvaddstr(0, 0, "Saved myReceipt.csv");
+      refresh();
+      saveReceipt("./data/myReceipt.csv", ascStack);
       break;
     case 'p':
       if (!is_open_qrCode) {
@@ -539,7 +637,7 @@ void drawListReceipt(WINDOW* win) {
   /*
     Items
   */
-  receipt_items_size = y - (current + 1) - 7;
+  receipt_items_size = y - (current + 1) - 8;
   int idx = 0;
   for (size_t i = 0; i < receipt_items_size; i++) {
     Item* item = getItemAt(ascStack, idx);
@@ -581,6 +679,9 @@ void drawListReceipt(WINDOW* win) {
     total
   */
   int total = Summation(ascStack);
+  float tax_ = tax(float(total));
+  int total_after_tax = total + tax_;
+
   mvwprintw(win, current, receipt_items_offset_x, "TOTAL ($):");
   mvwprintw(win, current++, col_amount, "%7s",
             (std::to_string(total) + " $").c_str());
@@ -591,10 +692,14 @@ void drawListReceipt(WINDOW* win) {
 
   mvwaddwstr(win, current++, receipt_items_offset_x,
              L"─────────────────────────────────────────");
+
+  mvwprintw(win, current, col_qty, "%10s", "Tax: ");
+  mvwprintw(win, current++, col_amount, "%7s", "10 %");
   mvwprintw(win, current, receipt_items_offset_x, "(1$=4100R)");
-  mvwprintw(win, current, col_qty, "By card: ");
+  mvwprintw(win, current, col_qty, "%10s", "By card: ");
   mvwprintw(win, current++, col_amount, "%7s",
-            (std::to_string(total) + " $").c_str());
+            (std::to_string(total_after_tax) + " $").c_str());
+
   /*
     footer
   */
@@ -657,9 +762,8 @@ void reDrawItem(WINDOW* win, std::vector<std::pair<WINDOW*, Item>>& ItemElement,
       if (qty > 0) {
         // Quantity
         mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2,
-                  win_x / 2 - qtyLength / 2, ("x" + qtyString).c_str());
+                  win_x / 2 - qtyLength / 2 - 1, (" x" + qtyString).c_str());
       } else {
-
         // Quantity clear
         mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2,
                   win_x / 2 - qtyLength / 2, "     ");
@@ -734,7 +838,7 @@ void drawItem(WINDOW* win, ASCstack* AS,
       if (ascItem->qty > 0) {
         // Quantity
         mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2,
-                  win_x / 2 - qtyLength / 2, ("x" + qtyString).c_str());
+                  win_x / 2 - qtyLength / 2 - 1, (" x" + qtyString).c_str());
       } else {
         // Quantity clear
         mvwaddstr(newin, (win_y % 2) ? win_y / 2 + 1 : win_y / 2, win_x / 2 - 5,
@@ -751,6 +855,19 @@ void drawItem(WINDOW* win, ASCstack* AS,
               (std::to_string(item.price) + "$").c_str());
     wrefresh(newin);
   }
+}
+void drawInstruction(WINDOW* win) {
+  drawBorderWin(win);
+  int x, y;
+  getmaxyx(win, y, x);
+
+  int size = std::size(instruction);
+  mvwaddwstr(win, 0, x / 2 - 5, L"Instruction");
+  for (size_t i = 0; i < size; i++) {
+    mvwaddwstr(win, i + 1, 3, instruction[i]);
+  }
+  mvwaddwstr(win, size, x / 2 - 14, L"Press any key to continue...");
+  wrefresh(win);
 }
 Item* getWindowItem(std::vector<std::pair<WINDOW*, Item>> ItemElement,
                     unsigned int id) {
