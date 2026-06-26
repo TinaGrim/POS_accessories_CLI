@@ -46,4 +46,5 @@ bool addexistProduct(ASCstack* s, unsigned int ID);
 bool deleteProduct(ASCstack* s, int deleteID);
 int Summation(ASCstack* c);
 float tax(float total);
+void saveReceipt(std::string filename, ASCstack*s);
 #endif // !MYSTACK_H

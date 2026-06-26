@@ -1,5 +1,7 @@
 #include "../include/mystack.h"
 #include "../include/Items.h"
+#include <ctime>
+#include <fstream>
 #include <string>
 
 // Create Empty Stack
@@ -223,4 +225,19 @@ int Summation(ASCstack* c) {
 float tax(float total) {
   // expected rate is 10%
   return total * 0.1;
+}
+void saveReceipt(std::string filename, ASCstack* s) {
+  int total = Summation(s);
+  if (!(total > 0)) {
+    return;
+  }
+  std::ofstream file(filename, std::ios::app);
+  if (file.is_open()) {
+    char c = ',';
+    time_t now;
+    std::time(&now);
+    int with_tax = total + tax(total);
+    file << "cashier" << c << with_tax << c << "card" << c << ctime(&now);
+    file.close();
+  }
 }
