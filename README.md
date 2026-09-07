@@ -52,7 +52,6 @@ git clone https://github.com/TinaGrim/POS_accessories_CLI.git
 cd POS_accessories_CLI
 ```
 
-
 ### 2. Run Program
 
 ```bash
