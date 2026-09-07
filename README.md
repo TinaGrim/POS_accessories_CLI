@@ -44,6 +44,15 @@ git clone https://github.com/TinaGrim/POS_accessories_CLI.git
 cd POS_accessories_CLI
 ```
 
+### (Mac)
+
+```bash
+brew install ncurses qrencode make git g++
+git clone https://github.com/TinaGrim/POS_accessories_CLI.git 
+cd POS_accessories_CLI
+```
+
+
 ### 2. Run Program
 
 ```bash

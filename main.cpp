@@ -344,7 +344,6 @@ int main(int argc, char* argv[]) {
     List Available Item
   */
   drawItem(ItemWindow, ascStack, ItemElement);
-
   int input;
   while ((input = wgetch(ItemWindow)) != 'q') {
 
